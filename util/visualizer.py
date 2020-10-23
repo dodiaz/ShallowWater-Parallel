@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Visualize shallow water simulation results.
+Visualize shallow water simulation results in Python.
 
 NB: Requires a modern Matplotlib version; also needs
  either FFMPeg (for MP4) or ImageMagick (for GIF)
