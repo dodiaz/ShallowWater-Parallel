@@ -375,7 +375,7 @@ void copy_in(float* restrict usub, float* restrict u, int nx, int ny, int ng, in
   int s = nx_sub_all*ny_sub_all;
   
   
-  for (int k = 0; k < nfields; k++) {
+  for (int k = 0; k < nfield; k++) {
     for (int iy = 0; iy < ny_sub_all; iy++) {
       for (int ix = 0; ix < nx_sub_all; ix++) {
         
@@ -406,7 +406,7 @@ void copy_out(float* restrict usub, float* restrict u, int nx, int ny, int ng, i
   int s = nx_sub_all*ny_sub_all;
   
   
-  for (int k = 0; k < nfields; k++) {
+  for (int k = 0; k < nfield; k++) {
     for (int iy = ng; iy < ny_sub_all - ng; iy++) {
       for (int ix = ng; ix < nx_sub_all - ng; ix++) {
         
@@ -448,7 +448,7 @@ int central2d_xrun(float* restrict u, float* restrict v,
     int ny_sub = ny/Ycores;                                                         //added
   
     int nx_sub_all = nx_sub + 2*ng;                                                 //added
-    int nx_sub_all = ny_sub + 2*ng;                                                 //added
+    int ny_sub_all = ny_sub + 2*ng;                                                 //added
     int s = nx_sub_all*ny_sub_all;                                                  //added
   
     float* usub = (float*) malloc(ncores*(4*nfield*s + 6*nx_sub_all) * sizeof(float) );   //added
@@ -479,7 +479,7 @@ int central2d_xrun(float* restrict u, float* restrict v,
         for (int j = 0; j < Ycores; j++) {
           for (int i = 0; i < Xcores; i++) {
             
-            copy_in(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, field, Xcores, Ycores);
+            copy_in(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
             k += 1;
             
           }
@@ -510,7 +510,7 @@ int central2d_xrun(float* restrict u, float* restrict v,
         for (int j = 0; j < Ycores; j++) {
           for (int i = 0; i < Xcores; i++) {
             
-            copy_out(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, field, Xcores, Ycores);
+            copy_out(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
             k += 1;
             
           }
