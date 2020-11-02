@@ -18,7 +18,8 @@ central2d_t* central2d_init(float w, float h, int nx, int ny,
                             float cfl)
 {
     // We extend to a four cell buffer to avoid BC comm on odd time steps
-    int ng = 4;
+    int t_btwn_com = 3;        //*//*// if this is changed, change line below with same comment structure
+    int ng = 4*t_btwn_com;                                                          
 
     central2d_t* sim = (central2d_t*) malloc(sizeof(central2d_t));
     sim->nx = nx;
@@ -357,6 +358,71 @@ void central2d_step(float* restrict u, float* restrict v,
  * at the end lives on the main grid instead of the staggered grid.
  */
 
+static 
+void copy_in(float* restrict usub, float* restrict u, int nx, int ny, int ng, int nfield, int Xcores, int Ycores) {
+  
+  int nx_all = nx + 2*ng;
+  int ny_all = ny + 2*ng;
+  
+  int S = nx_all*ny_all;
+  
+  int nx_sub = nx / Xcores;
+  int ny_sub = ny / Ycores;
+  
+  int nx_sub_all = nx_sub + 2*ng;
+  int ny_sub_all = ny_sub + 2*ng;
+  
+  int s = nx_sub_all*ny_sub_all;
+  
+  
+  for (int k = 0; k < nfields; k++) {
+    for (int iy = 0; iy < ny_sub_all; iy++) {
+      for (int ix = 0; ix < nx_sub_all; ix++) {
+        
+        usub[k*ny_sub_all*nx_sub_all + iy*nx_sub_all + ix] = u[k*ny_all*nx_all + iy*nx_all + ix];
+        
+      }
+    }
+  }
+  
+}
+
+
+
+static 
+void copy_out(float* restrict usub, float* restrict u, int nx, int ny, int ng, int nfield, int Xcores, int Ycores) {
+  
+  int nx_all = nx + 2*ng;
+  int ny_all = ny + 2*ng;
+  
+  int S = nx_all*ny_all;
+  
+  int nx_sub = nx / Xcores;
+  int ny_sub = ny / Ycores;
+  
+  int nx_sub_all = nx_sub + 2*ng;
+  int ny_sub_all = ny_sub + 2*ng;
+  
+  int s = nx_sub_all*ny_sub_all;
+  
+  
+  for (int k = 0; k < nfields; k++) {
+    for (int iy = ng; iy < ny_sub_all - ng; iy++) {
+      for (int ix = ng; ix < nx_sub_all - ng; ix++) {
+        
+        u[k*ny_all*nx_all + iy*nx_all + ix] = usub[k*ny_sub_all*nx_sub_all + iy*nx_sub_all + ix];
+        
+      }
+    }
+  }
+  
+}
+
+
+
+
+
+
 static
 int central2d_xrun(float* restrict u, float* restrict v,
                    float* restrict scratch,
@@ -369,25 +435,88 @@ int central2d_xrun(float* restrict u, float* restrict v,
     int nstep = 0;
     int nx_all = nx + 2*ng;
     int ny_all = ny + 2*ng;
+    int S = nx_all*ny_all;                                                          //added
+  
     bool done = false;
     float t = 0;
+  
+    double Xcores = 3;                             //--//--//-- when these are changed, also change 
+    double Ycores = 2;                                                   
+    int ncores = Xcores*Ycores;
+  
+    int nx_sub = nx/Xcores;                                                         //added
+    int ny_sub = ny/Ycores;                                                         //added
+  
+    int nx_sub_all = nx_sub + 2*ng;                                                 //added
+    int nx_sub_all = ny_sub + 2*ng;                                                 //added
+    int s = nx_sub_all*ny_sub_all;                                                  //added
+  
+    float* usub = (float*) malloc(ncores*(4*nfield*s + 6*nx_sub_all) * sizeof(float) );   //added
+    float* vsub =       usub + 1*nfield*s;                                          //added
+    float* fsub =       usub + 2*nfield*s;                                          //added
+    float* gsub =       usub + 3*nfield*s;                                          //added
+    float* scratchsub = usub + 4*nfield*s;                                          //added
+  
+    int time_btwn_comm = 3;  //*//*// if this is changed, change line above with same comment structure
+  
+  
     while (!done) {
         float cxy[2] = {1.0e-15f, 1.0e-15f};
         central2d_periodic(u, nx, ny, ng, nfield);
         speed(cxy, u, nx_all * ny_all, nx_all * ny_all);
         float dt = cfl / fmaxf(cxy[0]/dx, cxy[1]/dy);
-        if (t + 2*dt >= tfinal) {
+        if (t + 2*time_btwn_comm*dt >= tfinal) {
             dt = (tfinal-t)/2;
             done = true;
         }
-        central2d_step(u, v, scratch, f, g,
-                       0, nx+4, ny+4, ng-2,
-                       nfield, flux, speed,
-                       dt, dx, dy);
-        central2d_step(v, u, scratch, f, g,
-                       1, nx, ny, ng,
-                       nfield, flux, speed,
-                       dt, dx, dy);
+      
+      
+      
+        int I = 4*nfield*s + 6*nx_sub_all;                           //added (begin)
+        int k = 0;                                                   
+      
+        //copy in the data
+        for (int j = 0; j < Ycores; j++) {
+          for (int i = 0; i < Xcores; i++) {
+            
+            copy_in(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, field, Xcores, Ycores);
+            k += 1;
+            
+          }
+        }
+      
+        //compute
+#pragma omp parallel for
+        for (int i = 0; i < Xcores*Ycores; i++) {
+          
+          for (int sub_step = 0; sub_step < time_btwn_comm; sub_step++) {
+            
+            central2d_step(usub + i*I, vsub + i*I, scratchsub + i*I, fsub + i*I, gsub + i*I,
+                           0, nx_sub+4, ny_sub+4, ng-2,
+                           nfield, flux, speed,
+                           dt, dx, dy);
+            central2d_step(vsub + i*I, usub + i*I, scratchsub + i*I, fsub + i*I, gsub + i*I,
+                           1, nx_sub, ny_sub, ng,
+                           nfield, flux, speed,
+                           dt, dx, dy);
+            
+            }
+        }
+          
+          
+  
+                    
+        //copy out the data                                           
+        for (int j = 0; j < Ycores; j++) {
+          for (int i = 0; i < Xcores; i++) {
+            
+            copy_out(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, field, Xcores, Ycores);
+            k += 1;
+            
+          }
+        }                                                                                 //added (end)
+             
+      
         t += 2*dt;
         nstep += 2;
     }
