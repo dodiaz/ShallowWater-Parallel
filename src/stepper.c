@@ -486,8 +486,8 @@ int central2d_xrun(float* restrict u, float* restrict v,
         }
       
         //compute
-#pragma omp parallel for num_threads(Xcores*Ycores)
-        for (int i = 0; i < Xcores*Ycores; i++) {
+#pragma omp parallel for num_threads(6) // will need to change this 6 and the one below!!!!
+        for (int i = 0; i < 6; i++) {
           
           for (int sub_step = 0; sub_step < time_btwn_comm; sub_step++) {
             
