@@ -376,9 +376,9 @@ void copy_in(float* restrict usub, float* restrict u, int nx, int ny, int ng, in
   int s = nx_sub_all*ny_sub_all;
   
   
-  for (int k = 0; k < nfield; k++) {
-    for (int iy = 0; iy < ny_sub_all; iy++) {
-      for (int ix = 0; ix < nx_sub_all; ix++) {
+  for (int k = 0; k < nfield; ++k) {
+    for (int iy = 0; iy < ny_sub_all; ++iy) {
+      for (int ix = 0; ix < nx_sub_all; ++ix) {
         
         usub[k*ny_sub_all*nx_sub_all + iy*nx_sub_all + ix] = u[k*ny_all*nx_all + iy*nx_all + ix];
         
@@ -407,9 +407,9 @@ void copy_out(float* restrict usub, float* restrict u, int nx, int ny, int ng, i
   int s = nx_sub_all*ny_sub_all;
   
   
-  for (int k = 0; k < nfield; k++) {
-    for (int iy = ng; iy < ny_sub_all - ng; iy++) {
-      for (int ix = ng; ix < nx_sub_all - ng; ix++) {
+  for (int k = 0; k < nfield; ++k) {
+    for (int iy = ng; iy < ny_sub_all - ng; ++iy) {
+      for (int ix = ng; ix < nx_sub_all - ng; ++ix) {
         
         u[k*ny_all*nx_all + iy*nx_all + ix] = usub[k*ny_sub_all*nx_sub_all + iy*nx_sub_all + ix];
         
@@ -478,8 +478,8 @@ int central2d_xrun(float* restrict u, float* restrict v,
         int k = 0;                                                   
       
         //copy in the data
-        for (int j = 0; j < Ycores; j++) {
-          for (int i = 0; i < Xcores; i++) {
+        for (int j = 0; j < Ycores; ++j) {
+          for (int i = 0; i < Xcores; ++i) {
             
             copy_in(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
             k += 1;
@@ -488,10 +488,10 @@ int central2d_xrun(float* restrict u, float* restrict v,
         }
       
         //compute
-#pragma omp parallel for num_threads(6) // will need to change this 6 and the one below!!!!
-        for (int i = 0; i < 6; i++) {
+#pragma omp parallel for // will need to change this 6 and the one below!!!!
+        for (int i = 0; i < 6; ++i) {
           
-          for (int sub_step = 0; sub_step < time_btwn_comm; sub_step++) {
+          for (int sub_step = 0; sub_step < time_btwn_comm; ++sub_step) {
             
             central2d_step(usub + i*I, vsub + i*I, scratchsub + i*I, fsub + i*I, gsub + i*I,
                            0, nx_sub+4, ny_sub+4, ng-2,
@@ -507,10 +507,10 @@ int central2d_xrun(float* restrict u, float* restrict v,
           
           
   
-                    
+        k = 0;            
         //copy out the data                                           
-        for (int j = 0; j < Ycores; j++) {
-          for (int i = 0; i < Xcores; i++) {
+        for (int j = 0; j < Ycores; ++j) {
+          for (int i = 0; i < Xcores; ++i) {
             
             copy_out(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
             k += 1;
