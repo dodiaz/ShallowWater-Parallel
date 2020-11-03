@@ -19,7 +19,7 @@ central2d_t* central2d_init(float w, float h, int nx, int ny,
                             float cfl)
 {
     // We extend to a four cell buffer to avoid BC comm on odd time steps
-    int t_btwn_com = 2;        //----//---- if this is changed, change line below with same comment structure
+    int t_btwn_com = 2;        //--//--//--// if this is changed, change line at end with same comment structure
     int ng = 4*t_btwn_com;                                                          
 
     central2d_t* sim = (central2d_t*) malloc(sizeof(central2d_t));
@@ -436,29 +436,29 @@ int central2d_xrun(float* restrict u, float* restrict v,
     int nstep = 0;
     int nx_all = nx + 2*ng;
     int ny_all = ny + 2*ng;
-    int S = nx_all*ny_all;                                                          //added
-  
+    int S = nx_all*ny_all;                           
+
     bool done = false;
     float t = 0;
   
-    int Xcores = 3;                             //--//--//-- when these are changed, also change 
+    int Xcores = 3;                       //++//++//++// to change number of threads/how we partition the domain 
     int Ycores = 2;                                                   
     int ncores = Xcores*Ycores;
   
-    int nx_sub = nx/Xcores;                                                         //added
-    int ny_sub = ny/Ycores;                                                         //added
+    int nx_sub = nx/Xcores;                                                         
+    int ny_sub = ny/Ycores;                                                         
   
-    int nx_sub_all = nx_sub + 2*ng;                                                 //added
-    int ny_sub_all = ny_sub + 2*ng;                                                 //added
-    int s = nx_sub_all*ny_sub_all;                                                  //added
+    int nx_sub_all = nx_sub + 2*ng;                                                 
+    int ny_sub_all = ny_sub + 2*ng;                                                 
+    int s = nx_sub_all*ny_sub_all;                                                  
   
-    float* usub = (float*) malloc(ncores*(4*nfield*s + 6*nx_sub_all) * sizeof(float) );   //added
-    float* vsub =       usub + 1*nfield*s;                                          //added
-    float* fsub =       usub + 2*nfield*s;                                          //added
-    float* gsub =       usub + 3*nfield*s;                                          //added
-    float* scratchsub = usub + 4*nfield*s;                                          //added
+    float* usub = (float*) malloc(ncores*(4*nfield*s + 6*nx_sub_all) * sizeof(float) );   
+    float* vsub =       usub + 1*nfield*s;                                          
+    float* fsub =       usub + 2*nfield*s;                                          
+    float* gsub =       usub + 3*nfield*s;                                          
+    float* scratchsub = usub + 4*nfield*s;                                          
   
-    int time_btwn_comm = 2;  //----//---- if this is changed, change line above with same comment structure
+    int time_btwn_comm = 2;  //--//--//--// if this is changed, change line at beginning of code with same comment structure
   
   
     while (!done) {
@@ -474,26 +474,16 @@ int central2d_xrun(float* restrict u, float* restrict v,
       
       
       
-        int I = 4*nfield*s + 6*nx_sub_all;                           //added (begin)
-        int k = 0;                                                   
+        int I = 4*nfield*s + 6*nx_sub_all;                          
       
-        //copy in the data
-        //for (int j = 0; j < Ycores; ++j) {
-        //  for (int i = 0; i < Xcores; ++i) {
-            
-        //    copy_in(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
-        //    k += 1;
-            
-        //  }
-        //}
-      
-        //compute
+        //parallel region does copy in, compute, and copy out
 	int processor_tot = Xcores*Ycores;
-#pragma omp parallel for num_threads(processor_tot)  // will need to change this 6 and the one below!!!!
+#pragma omp parallel for num_threads(processor_tot)  
         for (int k = 0; k < processor_tot; ++k) {
           
 	  int i1 = k % Xcores;
 	  int j1 = (k-i1)/Xcores;
+
 	  copy_in(usub + k*I, u + j1*ny_sub*nx_all + i1 * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
 
           for (int sub_step = 0; sub_step < time_btwn_comm; ++sub_step) {
@@ -509,26 +499,10 @@ int central2d_xrun(float* restrict u, float* restrict v,
             
             }
 
-
 	    copy_out(usub + k*I, u + j1*ny_sub*nx_all + i1 * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
-
-
 
         }
           
-          
-  
-        //k = 0;            
-        //copy out the data                                           
-        //for (int j = 0; j < Ycores; ++j) {
-          //for (int i = 0; i < Xcores; ++i) {
-            
-           // copy_out(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
-           // k += 1;
-            
-         // }
-        //}                                                                                 //added (end)
-             
       
         t += 2*time_btwn_comm*dt;
         nstep += 2*time_btwn_comm;
