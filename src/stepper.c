@@ -19,7 +19,7 @@ central2d_t* central2d_init(float w, float h, int nx, int ny,
                             float cfl)
 {
     // We extend to a four cell buffer to avoid BC comm on odd time steps
-    int t_btwn_com = 3;        //----//---- if this is changed, change line below with same comment structure
+    int t_btwn_com = 2;        //----//---- if this is changed, change line below with same comment structure
     int ng = 4*t_btwn_com;                                                          
 
     central2d_t* sim = (central2d_t*) malloc(sizeof(central2d_t));
@@ -458,7 +458,7 @@ int central2d_xrun(float* restrict u, float* restrict v,
     float* gsub =       usub + 3*nfield*s;                                          //added
     float* scratchsub = usub + 4*nfield*s;                                          //added
   
-    int time_btwn_comm = 3;  //----//---- if this is changed, change line above with same comment structure
+    int time_btwn_comm = 2;  //----//---- if this is changed, change line above with same comment structure
   
   
     while (!done) {
