@@ -1,8 +1,8 @@
 --
 -- Basic tests
 --
-nx = tonumber(args[2]) or 300
-vskip = math.floor(nx/300)
+nx = tonumber(args[2]) or 600
+vskip = math.floor(nx/600)
 
 pond = {
   init = function(x,y) return 1, 0, 0 end,
