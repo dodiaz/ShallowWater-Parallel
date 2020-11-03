@@ -441,8 +441,8 @@ int central2d_xrun(float* restrict u, float* restrict v,
     bool done = false;
     float t = 0;
   
-    double Xcores = 3;                             //--//--//-- when these are changed, also change 
-    double Ycores = 2;                                                   
+    int Xcores = 3;                             //--//--//-- when these are changed, also change 
+    int Ycores = 2;                                                   
     int ncores = Xcores*Ycores;
   
     int nx_sub = nx/Xcores;                                                         //added
@@ -478,45 +478,56 @@ int central2d_xrun(float* restrict u, float* restrict v,
         int k = 0;                                                   
       
         //copy in the data
-        for (int j = 0; j < Ycores; ++j) {
-          for (int i = 0; i < Xcores; ++i) {
+        //for (int j = 0; j < Ycores; ++j) {
+        //  for (int i = 0; i < Xcores; ++i) {
             
-            copy_in(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
-            k += 1;
+        //    copy_in(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
+        //    k += 1;
             
-          }
-        }
+        //  }
+        //}
       
         //compute
-#pragma omp parallel for // will need to change this 6 and the one below!!!!
-        for (int i = 0; i < 6; ++i) {
+	int processor_tot = Xcores*Ycores;
+#pragma omp parallel for num_threads(processor_tot)  // will need to change this 6 and the one below!!!!
+        for (int k = 0; k < processor_tot; ++k) {
           
+	  int i1 = k % Xcores;
+	  int j1 = (k-i1)/Xcores;
+	  copy_in(usub + k*I, u + j1*ny_sub*nx_all + i1 * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
+
           for (int sub_step = 0; sub_step < time_btwn_comm; ++sub_step) {
             
-            central2d_step(usub + i*I, vsub + i*I, scratchsub + i*I, fsub + i*I, gsub + i*I,
+            central2d_step(usub + k*I, vsub + k*I, scratchsub + k*I, fsub + k*I, gsub + k*I,
                            0, nx_sub+4, ny_sub+4, ng-2,
                            nfield, flux, speed,
                            dt, dx, dy);
-            central2d_step(vsub + i*I, usub + i*I, scratchsub + i*I, fsub + i*I, gsub + i*I,
+            central2d_step(vsub + k*I, usub + k*I, scratchsub + k*I, fsub + k*I, gsub + k*I,
                            1, nx_sub, ny_sub, ng,
                            nfield, flux, speed,
                            dt, dx, dy);
             
             }
+
+
+	    copy_out(usub + k*I, u + j1*ny_sub*nx_all + i1 * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
+
+
+
         }
           
           
   
-        k = 0;            
+        //k = 0;            
         //copy out the data                                           
-        for (int j = 0; j < Ycores; ++j) {
-          for (int i = 0; i < Xcores; ++i) {
+        //for (int j = 0; j < Ycores; ++j) {
+          //for (int i = 0; i < Xcores; ++i) {
             
-            copy_out(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
-            k += 1;
+           // copy_out(usub + k*I, u + j*ny_sub*nx_all + i * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
+           // k += 1;
             
-          }
-        }                                                                                 //added (end)
+         // }
+        //}                                                                                 //added (end)
              
       
         t += 2*time_btwn_comm*dt;
