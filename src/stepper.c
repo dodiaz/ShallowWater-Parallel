@@ -469,7 +469,6 @@ int central2d_xrun(float* restrict u, float* restrict v,
         if (t + 2*time_btwn_comm*dt >= tfinal) {
             dt = (tfinal-t)/2;
             done = true;
-	    printf("this happened at least once");
         }
       
       
