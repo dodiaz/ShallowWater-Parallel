@@ -496,10 +496,10 @@ int central2d_xrun(float* restrict u, float* restrict v,
 	    copy_out(usub + k*I, u + j1*ny_sub*nx_all + i1 * nx_sub, nx, ny, ng, nfield, Xcores, Ycores);
         }
                 
-        t += 2*time_btwn_comm*dt;
-        nstep += 2*time_btwn_comm;
 #pragma omp single
 	{
+	t += 2*time_btwn_comm*dt;
+        nstep += 2*time_btwn_comm;
         central2d_periodic(u, nx, ny, ng, nfield);
         speed(cxy, usub, nx_sub_all * ny_sub_all, nx_sub_all * ny_sub_all);
         float dt = cfl / fmaxf(cxy[0]/dx, cxy[1]/dy);
