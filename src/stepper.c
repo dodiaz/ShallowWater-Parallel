@@ -441,8 +441,8 @@ int central2d_xrun(float* restrict u, float* restrict v,
     bool done = false;
     float t = 0;
   
-    int Xcores = 4;                       //++//++//++// to change number of threads/how we partition the domain 
-    int Ycores = 4;                                                   
+    int Xcores = 2;                       //++//++//++// to change number of threads/how we partition the domain 
+    int Ycores = 2;                                                   
     int ncores = Xcores*Ycores;
   
     int nx_sub = nx/Xcores;                                                         
